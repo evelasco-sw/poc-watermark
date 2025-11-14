@@ -27,7 +27,7 @@ namespace WatermarkApi.Controllers
 
             try
             {
-                var imagePath = Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot", "images", "watermark.png");
+                var imagePath = Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot", "images", "logo_bcie.png");
 
                 // Guardamos temporalmente el archivo recibido.
                 var tempFilePath = Path.GetTempFileName();
