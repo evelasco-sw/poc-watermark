@@ -20,20 +20,21 @@ public static class PngTextImageGenerator
         }
 
         customText ??= string.Empty;
-
         var dateLine = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
-        var fontFamily = SystemFonts.Collection.Families
-            .FirstOrDefault(f => f.Name.Equals("Arial", StringComparison.OrdinalIgnoreCase))
-            ?? SystemFonts.Collection.Families.First();
+        var combined = dateLine + "\n" + customText.Trim();
 
         var margin = Math.Max(20, size / 20);
         float fontSize = size / 8f;
         if (fontSize < 8f) fontSize = 8f;
 
-        Font font = fontFamily.CreateFont(fontSize);
+        FontFamily fontFamily;
+        if (!SystemFonts.TryGet("Arial", out fontFamily))
+        {
+            var fallbackFamily = SystemFonts.Families.FirstOrDefault();
+            fontFamily = fallbackFamily;
+        }
 
-        var combined = dateLine + "\n" + customText.Trim();
+        var font = fontFamily.CreateFont(fontSize);
 
         RichTextOptions options = new(font)
         {
@@ -44,7 +45,7 @@ public static class PngTextImageGenerator
 
         var attempts = 0;
         const int maxAttempts = 50;
-        var measure = TextMeasurer.Measure(combined, options);
+        var measure = TextMeasurer.MeasureSize(combined, options);
 
         while ((measure.Width > size - margin * 2 || measure.Height > size - margin * 2) && attempts < maxAttempts)
         {
@@ -57,14 +58,14 @@ public static class PngTextImageGenerator
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Top,
             };
-            measure = TextMeasurer.Measure(combined, options);
+            measure = TextMeasurer.MeasureSize(combined, options);
             attempts++;
         }
 
         using var image = new Image<Rgba32>(size, size);
         image.Mutate(ctx => ctx.Fill(backgroundColor ?? Color.White));
 
-        var startY = (size - measure.Height) / 2f; // center vertically
+        var startY = (size - measure.Height) / 2f;
         options.Origin = new PointF(size / 2f, startY);
 
         image.Mutate(ctx => ctx.DrawText(options, combined, textColor ?? Color.Black));
