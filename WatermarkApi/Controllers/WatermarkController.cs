@@ -1,8 +1,6 @@
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.AspNetCore.Mvc;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using OfficeIMO.Word;
+using WatermarkApi.Utils;
 
 namespace WatermarkApi.Controllers
 {
@@ -10,6 +8,14 @@ namespace WatermarkApi.Controllers
     [ApiController]
     public class WatermarkController : ControllerBase
     {
+        private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly ILogger<WatermarkController> _logger;
+
+        public WatermarkController(IWebHostEnvironment webHostEnvironment, ILogger<WatermarkController> logger)
+        {
+            _webHostEnvironment = webHostEnvironment;
+            _logger = logger;
+        }
 
         [HttpPost("word")]
         public async Task<IActionResult> AddWatermarkToWord(IFormFile file, [FromForm] string username)
@@ -21,99 +27,42 @@ namespace WatermarkApi.Controllers
 
             try
             {
-                // 1. Generar imagen de marca de agua dinámica
-                var watermarkImage = GenerateWatermarkImage(username, DateTime.UtcNow);
+                var imagePath = Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot", "images", "watermark.png");
 
-                // 2. Procesar el documento con Open XML SDK
-                using var memoryStream = new MemoryStream();
-                await file.CopyToAsync(memoryStream);
-                memoryStream.Position = 0;
+                // Guardamos temporalmente el archivo recibido.
+                var tempFilePath = Path.GetTempFileName();
+                using (var stream = new FileStream(tempFilePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
 
-                AddWatermarkToDocument(memoryStream, watermarkImage);
+                using (var document = WordDocument.Load(tempFilePath))
+                {
+                    document.AddParagraph("Section 0");
+                    document.AddHeadersAndFooters();
 
-                // 3. Devolver el documento modificado
-                memoryStream.Position = 0;
-                return File(memoryStream.ToArray(),
-                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            "watermarked.docx");
+                    var section0 = document.Sections[0];
+                    var section0Header = WatermarkHelper.GetRequiredHeader(section0);
+
+                    section0Header.AddWatermark(WordWatermarkStyle.Image, imagePath);
+
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        document.SaveAs(memoryStream);
+                        return File(memoryStream.ToArray(),
+                                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                    "watermarked.docx");
+                    }
+                }
+
             }
             catch (Exception ex)
             {
+                _logger.LogCritical(ex, "Error al crear la marca de agua {Message}", ex.Message);
                 return StatusCode(500, $"Internal error: {ex.Message}");
             }
         }
 
-        private byte[] GenerateWatermarkImage(string username, DateTime timestamp)
-        {
-            // Tamaño óptimo para una marca de agua (se ajustará en Word)
-            var width = 400;
-            var height = 200;
 
-            using var image = new Image<Rgba32>(width, height);
-           
-            using var ms = new MemoryStream();
-            image.SaveAsPng(ms);
-            return ms.ToArray();
-        }
-
-        private void AddWatermarkToDocument(Stream documentStream, byte[] watermarkImage)
-        {
-            using var doc = WordprocessingDocument.Open(documentStream, true);
-            var mainPart = doc.MainDocumentPart;
-
-            var imagePart = mainPart.AddImagePart(ImagePartType.Png);
-            using (var imageStream = new MemoryStream(watermarkImage))
-            {
-                imagePart.FeedData(imageStream);
-            }
-            var imageId = mainPart.GetIdOfPart(imagePart);
-
-            // 3. Aplicar la marca de agua a TODOS los tipos de header
-            ApplyWatermarkToAllHeaders(mainPart, imageId);
-        }
-
-        private void ApplyWatermarkToAllHeaders(MainDocumentPart mainPart, string imageId)
-        {
-            // Tipos de header: Default, First, Even
-            foreach (var headerPart in mainPart.HeaderParts)
-            {
-                var header = headerPart.Header;
-                header.RemoveAllChildren(); // Limpiar contenido existente (solo para el ejemplo)
-
-                // Crear un párrafo para la marca de agua
-                var paragraph = new Paragraph(
-                    new ParagraphProperties(
-                        new ParagraphStyleId { Val = "Header" },
-                        new SpacingBetweenLines { After = "0" },
-                        new Justification { Val = JustificationValues.Center }
-                    )
-                );
-
-                // Crear el contenedor VML para la imagen (compatible con Word)
-                var shape = new DocumentFormat.OpenXml.Vml.Shape
-                {
-                    Id = "Watermark_" + Guid.NewGuid().ToString("N"),
-                    Style = "position:absolute;margin-left:0;margin-top:0;width:100%;height:100%;z-index:-100",
-                    WrapCoordinates = "left 0,top 0,right 0,bottom 0",
-                    FillColor = "transparent",
-                    StrokeWeight = "0",
-                    // Rotation = 30, // Rotación diagonal
-                    AllowOverlap = true,
-                    // BehindDocument = true // ¡Clave para que esté detrás del texto!
-                };
-
-                // Enlazar la imagen al shape
-                shape.Append(new DocumentFormat.OpenXml.Vml.ImageData
-                {
-                    Title = "Watermark",
-                    Id = imageId
-                });
-
-                // Añadir el shape al párrafo
-                paragraph.Append(new Run(shape));
-                header.Append(paragraph);
-                header.Save();
-            }
-        }
     }
 }
