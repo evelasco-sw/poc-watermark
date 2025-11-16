@@ -19,25 +19,42 @@ namespace WatermarkApi.Controllers
         }
 
         [HttpPost("word")]
-        public async Task<IActionResult> AddWatermarkToWord(IFormFile file, [FromForm] string username)
+        public async Task<IActionResult> AddWatermarkToWord(IFormFile docFile, IFormFile? imageFile = null, [FromForm] string? username = null)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("No file uploaded.");
-            if (System.IO.Path.GetExtension(file.FileName).ToLower() != ".docx")
+            if (docFile == null || docFile.Length == 0)
+                return BadRequest("No Word document uploaded.");
+            if (System.IO.Path.GetExtension(docFile.FileName).ToLower() != ".docx")
                 return BadRequest("Only .docx files are supported.");
+
+            string? imagePath = null;
+            string? tempImagePath = null;
 
             try
             {
-                var imagePath = Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot", "images", "logo_bcie.png");
-
-                // Guardamos temporalmente el archivo recibido.
-                var tempFilePath = Path.GetTempFileName();
-                using (var stream = new FileStream(tempFilePath, FileMode.Create))
+                // Si se proporciona una imagen personalizada, guardarla temporalmente
+                if (imageFile != null && imageFile.Length > 0)
                 {
-                    await file.CopyToAsync(stream);
+                    tempImagePath = Path.GetTempFileName();
+                    using (var stream = new FileStream(tempImagePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+                    imagePath = tempImagePath;
+                }
+                else
+                {
+                    // Usar imagen por defecto si no se proporciona una personalizada
+                    imagePath = Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot", "images", "logo_bcie.png");
                 }
 
-                using (var document = WordDocument.Load(tempFilePath))
+                // Guardar temporalmente el documento recibido
+                var tempDocPath = Path.GetTempFileName();
+                using (var stream = new FileStream(tempDocPath, FileMode.Create))
+                {
+                    await docFile.CopyToAsync(stream);
+                }
+
+                using (var document = WordDocument.Load(tempDocPath))
                 {
                     document.AddParagraph("Section 0");
                     document.AddHeadersAndFooters();
@@ -61,6 +78,14 @@ namespace WatermarkApi.Controllers
             {
                 _logger.LogCritical(ex, "Error al crear la marca de agua {Message}", ex.Message);
                 return StatusCode(500, $"Internal error: {ex.Message}");
+            }
+            finally
+            {
+                // Limpiar archivos temporales
+                if (!string.IsNullOrEmpty(tempImagePath) && System.IO.File.Exists(tempImagePath))
+                {
+                    try { System.IO.File.Delete(tempImagePath); } catch { }
+                }
             }
         }
 
