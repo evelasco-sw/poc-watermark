@@ -301,6 +301,122 @@ namespace WatermarkApi.Controllers
             }
         }
 
+        [HttpPost("pdf")]
+        public async Task<IActionResult> AddWatermarkToPdf(IFormFile pdfFile, IFormFile? imageFile = null)
+        {
+            if (pdfFile == null || pdfFile.Length == 0)
+                return BadRequest("No PDF file uploaded.");
+            
+            if (System.IO.Path.GetExtension(pdfFile.FileName).ToLower() != ".pdf")
+                return BadRequest("Only .pdf files are supported.");
+
+            string? imagePath = null;
+            string? tempImagePath = null;
+            string? tempPdfPath = null;
+
+            try
+            {
+                // Si se proporciona una imagen personalizada, guardarla temporalmente
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    tempImagePath = Path.GetTempFileName();
+                    using (var stream = new FileStream(tempImagePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+                    imagePath = tempImagePath;
+                }
+                else
+                {
+                    // Usar imagen por defecto si no se proporciona una personalizada
+                    imagePath = Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot", "images", "logo_bcie.png");
+                }
+
+                // Guardar temporalmente el PDF recibido
+                tempPdfPath = Path.GetTempFileName();
+                using (var stream = new FileStream(tempPdfPath, FileMode.Create))
+                {
+                    await pdfFile.CopyToAsync(stream);
+                }
+
+                // Agregar marca de agua
+                var bytes = PdfWatermarkHelper.AddWatermarkToPdf(tempPdfPath, imagePath);
+                return File(bytes, "application/pdf", "watermarked.pdf");
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogError(ex, "Archivo no encontrado: {Message}", ex.Message);
+                return NotFound($"File not found: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Error al agregar marca de agua a PDF: {Message}", ex.Message);
+                return StatusCode(500, $"Internal error: {ex.Message}");
+            }
+            finally
+            {
+                // Limpiar archivos temporales
+                if (!string.IsNullOrEmpty(tempImagePath) && System.IO.File.Exists(tempImagePath))
+                {
+                    try { System.IO.File.Delete(tempImagePath); } catch { }
+                }
+                if (!string.IsNullOrEmpty(tempPdfPath) && System.IO.File.Exists(tempPdfPath))
+                {
+                    try { System.IO.File.Delete(tempPdfPath); } catch { }
+                }
+            }
+        }
+
+        [HttpPost("pdf-from-file")]
+        public async Task<IActionResult> AddWatermarkToPdfFromFile(IFormFile pdfFile, IFormFile imageFile)
+        {
+            if (pdfFile == null || pdfFile.Length == 0)
+                return BadRequest("No PDF file uploaded.");
+            if (imageFile == null || imageFile.Length == 0)
+                return BadRequest("No image file uploaded.");
+
+            string? tempImagePath = null;
+            string? tempPdfPath = null;
+
+            try
+            {
+                // Guardar temporalmente la imagen
+                tempImagePath = Path.GetTempFileName();
+                using (var stream = new FileStream(tempImagePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(stream);
+                }
+
+                // Guardar temporalmente el PDF
+                tempPdfPath = Path.GetTempFileName();
+                using (var stream = new FileStream(tempPdfPath, FileMode.Create))
+                {
+                    await pdfFile.CopyToAsync(stream);
+                }
+
+                // Agregar marca de agua
+                var bytes = PdfWatermarkHelper.AddWatermarkToPdf(tempPdfPath, tempImagePath);
+                return File(bytes, "application/pdf", "watermarked.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Error al agregar marca de agua a PDF: {Message}", ex.Message);
+                return StatusCode(500, $"Internal error: {ex.Message}");
+            }
+            finally
+            {
+                // Limpiar archivos temporales
+                if (!string.IsNullOrEmpty(tempImagePath) && System.IO.File.Exists(tempImagePath))
+                {
+                    try { System.IO.File.Delete(tempImagePath); } catch { }
+                }
+                if (!string.IsNullOrEmpty(tempPdfPath) && System.IO.File.Exists(tempPdfPath))
+                {
+                    try { System.IO.File.Delete(tempPdfPath); } catch { }
+                }
+            }
+        }
+
 
     }
 }
