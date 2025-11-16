@@ -20,7 +20,5 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.MapControllers();
 
-app.MapGet("/api/hello", () => "Hello, World!");
-
 app.Run();
 

@@ -184,6 +184,123 @@ namespace WatermarkApi.Controllers
             }
         }
 
+        [HttpPost("powerpoint")]
+        public async Task<IActionResult> AddWatermarkToPowerPoint(IFormFile pptFile, IFormFile? imageFile = null)
+        {
+            if (pptFile == null || pptFile.Length == 0)
+                return BadRequest("No PowerPoint presentation uploaded.");
+            
+            string ext = System.IO.Path.GetExtension(pptFile.FileName).ToLower();
+            if (ext != ".pptx" && ext != ".ppt")
+                return BadRequest("Only .pptx or .ppt files are supported.");
+
+            string? imagePath = null;
+            string? tempImagePath = null;
+            string? tempPptPath = null;
+
+            try
+            {
+                // Si se proporciona una imagen personalizada, guardarla temporalmente
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    tempImagePath = Path.GetTempFileName();
+                    using (var stream = new FileStream(tempImagePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+                    imagePath = tempImagePath;
+                }
+                else
+                {
+                    // Usar imagen por defecto si no se proporciona una personalizada
+                    imagePath = Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot", "images", "logo_bcie.png");
+                }
+
+                // Guardar temporalmente la presentación recibida
+                tempPptPath = Path.GetTempFileName();
+                using (var stream = new FileStream(tempPptPath, FileMode.Create))
+                {
+                    await pptFile.CopyToAsync(stream);
+                }
+
+                // Agregar marca de agua
+                var bytes = PowerPointWatermarkHelper.AddWatermarkToPresentation(tempPptPath, imagePath);
+                return File(bytes, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "watermarked.pptx");
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogError(ex, "Archivo no encontrado: {Message}", ex.Message);
+                return NotFound($"File not found: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Error al agregar marca de agua a PowerPoint: {Message}", ex.Message);
+                return StatusCode(500, $"Internal error: {ex.Message}");
+            }
+            finally
+            {
+                // Limpiar archivos temporales
+                if (!string.IsNullOrEmpty(tempImagePath) && System.IO.File.Exists(tempImagePath))
+                {
+                    try { System.IO.File.Delete(tempImagePath); } catch { }
+                }
+                if (!string.IsNullOrEmpty(tempPptPath) && System.IO.File.Exists(tempPptPath))
+                {
+                    try { System.IO.File.Delete(tempPptPath); } catch { }
+                }
+            }
+        }
+
+        [HttpPost("powerpoint-from-file")]
+        public async Task<IActionResult> AddWatermarkToPowerPointFromFile(IFormFile pptFile, IFormFile imageFile)
+        {
+            if (pptFile == null || pptFile.Length == 0)
+                return BadRequest("No PowerPoint presentation uploaded.");
+            if (imageFile == null || imageFile.Length == 0)
+                return BadRequest("No image file uploaded.");
+
+            string? tempImagePath = null;
+            string? tempPptPath = null;
+
+            try
+            {
+                // Guardar temporalmente la imagen
+                tempImagePath = Path.GetTempFileName();
+                using (var stream = new FileStream(tempImagePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(stream);
+                }
+
+                // Guardar temporalmente la presentación
+                tempPptPath = Path.GetTempFileName();
+                using (var stream = new FileStream(tempPptPath, FileMode.Create))
+                {
+                    await pptFile.CopyToAsync(stream);
+                }
+
+                // Agregar marca de agua
+                var bytes = PowerPointWatermarkHelper.AddWatermarkToPresentation(tempPptPath, tempImagePath);
+                return File(bytes, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "watermarked.pptx");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Error al agregar marca de agua a PowerPoint: {Message}", ex.Message);
+                return StatusCode(500, $"Internal error: {ex.Message}");
+            }
+            finally
+            {
+                // Limpiar archivos temporales
+                if (!string.IsNullOrEmpty(tempImagePath) && System.IO.File.Exists(tempImagePath))
+                {
+                    try { System.IO.File.Delete(tempImagePath); } catch { }
+                }
+                if (!string.IsNullOrEmpty(tempPptPath) && System.IO.File.Exists(tempPptPath))
+                {
+                    try { System.IO.File.Delete(tempPptPath); } catch { }
+                }
+            }
+        }
+
 
     }
 }
