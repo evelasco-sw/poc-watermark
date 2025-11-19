@@ -1,4 +1,6 @@
+using ImageGeneratorApi.Utils;
 using Scalar.AspNetCore;
+using SixLabors.ImageSharp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +19,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
 app.MapControllers();
 
 app.Run();
-

@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -8,7 +5,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Processing;
 
-namespace WatermarkApi.Utils;
+namespace ImageGeneratorApi.Utils;
 
 public static class PngTextImageGenerator
 {
