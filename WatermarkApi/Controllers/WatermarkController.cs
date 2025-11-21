@@ -156,56 +156,6 @@ namespace WatermarkApi.Controllers
             }
         }
 
-        [HttpPost("powerpoint-from-file")]
-        public async Task<IActionResult> AddWatermarkToPowerPointFromFile(IFormFile pptFile, IFormFile imageFile)
-        {
-            if (pptFile == null || pptFile.Length == 0)
-                return BadRequest("No PowerPoint presentation uploaded.");
-            if (imageFile == null || imageFile.Length == 0)
-                return BadRequest("No image file uploaded.");
-
-            string? tempImagePath = null;
-            string? tempPptPath = null;
-
-            try
-            {
-                // Guardar temporalmente la imagen
-                tempImagePath = Path.GetTempFileName();
-                using (var stream = new FileStream(tempImagePath, FileMode.Create))
-                {
-                    await imageFile.CopyToAsync(stream);
-                }
-
-                // Guardar temporalmente la presentación
-                tempPptPath = Path.GetTempFileName();
-                using (var stream = new FileStream(tempPptPath, FileMode.Create))
-                {
-                    await pptFile.CopyToAsync(stream);
-                }
-
-                // Agregar marca de agua
-                var bytes = PowerPointWatermarkHelper.AddWatermarkToPresentation(tempPptPath, tempImagePath);
-                return File(bytes, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "watermarked.pptx");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(ex, "Error al agregar marca de agua a PowerPoint: {Message}", ex.Message);
-                return StatusCode(500, $"Internal error: {ex.Message}");
-            }
-            finally
-            {
-                // Limpiar archivos temporales
-                if (!string.IsNullOrEmpty(tempImagePath) && System.IO.File.Exists(tempImagePath))
-                {
-                    try { System.IO.File.Delete(tempImagePath); } catch { }
-                }
-                if (!string.IsNullOrEmpty(tempPptPath) && System.IO.File.Exists(tempPptPath))
-                {
-                    try { System.IO.File.Delete(tempPptPath); } catch { }
-                }
-            }
-        }
-
         [HttpPost("pdf")]
         public async Task<IActionResult> AddWatermarkToPdf(IFormFile pdfFile, IFormFile? imageFile = null)
         {
@@ -271,57 +221,6 @@ namespace WatermarkApi.Controllers
                 }
             }
         }
-
-        [HttpPost("pdf-from-file")]
-        public async Task<IActionResult> AddWatermarkToPdfFromFile(IFormFile pdfFile, IFormFile imageFile)
-        {
-            if (pdfFile == null || pdfFile.Length == 0)
-                return BadRequest("No PDF file uploaded.");
-            if (imageFile == null || imageFile.Length == 0)
-                return BadRequest("No image file uploaded.");
-
-            string? tempImagePath = null;
-            string? tempPdfPath = null;
-
-            try
-            {
-                // Guardar temporalmente la imagen
-                tempImagePath = Path.GetTempFileName();
-                using (var stream = new FileStream(tempImagePath, FileMode.Create))
-                {
-                    await imageFile.CopyToAsync(stream);
-                }
-
-                // Guardar temporalmente el PDF
-                tempPdfPath = Path.GetTempFileName();
-                using (var stream = new FileStream(tempPdfPath, FileMode.Create))
-                {
-                    await pdfFile.CopyToAsync(stream);
-                }
-
-                // Agregar marca de agua
-                var bytes = PdfWatermarkHelper.AddWatermarkToPdf(tempPdfPath, tempImagePath);
-                return File(bytes, "application/pdf", "watermarked.pdf");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(ex, "Error al agregar marca de agua a PDF: {Message}", ex.Message);
-                return StatusCode(500, $"Internal error: {ex.Message}");
-            }
-            finally
-            {
-                // Limpiar archivos temporales
-                if (!string.IsNullOrEmpty(tempImagePath) && System.IO.File.Exists(tempImagePath))
-                {
-                    try { System.IO.File.Delete(tempImagePath); } catch { }
-                }
-                if (!string.IsNullOrEmpty(tempPdfPath) && System.IO.File.Exists(tempPdfPath))
-                {
-                    try { System.IO.File.Delete(tempPdfPath); } catch { }
-                }
-            }
-        }
-
 
     }
 }

@@ -482,3 +482,5 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+/WatermarkApi/Properties/GroupDocs.Markdownfor.NET.lic
+/WatermarkApi/GroupDocs.Markdownfor.NET.lic

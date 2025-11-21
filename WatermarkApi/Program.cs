@@ -7,6 +7,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
+GroupDocs.Watermark.License license = new GroupDocs.Watermark.License();
+license.SetLicense("GroupDocs.Markdownfor.NET.lic");
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

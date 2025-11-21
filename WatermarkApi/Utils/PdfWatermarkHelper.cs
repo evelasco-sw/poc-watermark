@@ -1,9 +1,13 @@
+using GroupDocs.Watermark;
+using GroupDocs.Watermark.Options.Pdf;
+using GroupDocs.Watermark.Watermarks;
+using iText.IO.Image;
+using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas;
-using iText.Kernel.Geom;
-using iText.IO.Image;
 using iText.Layout;
 using iText.Layout.Element;
+using Microsoft.VisualBasic;
 
 namespace WatermarkApi.Utils;
 
@@ -47,50 +51,25 @@ public static class PdfWatermarkHelper
             pdfStream.CopyTo(memoryStream);
             memoryStream.Position = 0;
 
-            using (PdfReader reader = new PdfReader(memoryStream))
-            using (PdfWriter writer = new PdfWriter(outputStream))
-            using (PdfDocument pdfDoc = new PdfDocument(reader, writer))
+            var loadOptions = new PdfLoadOptions();
+            using (Watermarker watermarker = new Watermarker(pdfStream, loadOptions))
             {
-                // Leer la imagen
-                ImageData imageData = ImageDataFactory.Create(imagePath);
+                //// Add text watermark to the first page
+                //TextWatermark textWatermark = new TextWatermark("BCIE", new Font("Verdana", 8));
+                //PdfArtifactWatermarkOptions textWatermarkOptions = new PdfArtifactWatermarkOptions();
+                //textWatermarkOptions.PageIndex = 0;
 
-                // Procesar cada página
-                for (int i = 1; i <= pdfDoc.GetNumberOfPages(); i++)
+                //watermarker.Add(textWatermark, textWatermarkOptions);
+
+                // Add image watermark to the second page
+                using (ImageWatermark imageWatermark = new ImageWatermark(imagePath))
                 {
-                    PdfPage page = pdfDoc.GetPage(i);
-                    Rectangle pageSize = page.GetPageSize();
-                    
-                    // Crear un canvas para dibujar sobre la página
-                    PdfCanvas canvas = new PdfCanvas(page);
-                    
-                    // Calcular posición y tamaño de la imagen
-                    float pageWidth = pageSize.GetWidth();
-                    float pageHeight = pageSize.GetHeight();
-                    
-                    float imageWidth = Math.Min(imageData.GetWidth(), pageWidth * 0.8f);
-                    float imageHeight = (imageWidth / imageData.GetWidth()) * imageData.GetHeight();
-                    
-                    // Si la altura excede el 80% de la página, escalar por altura
-                    if (imageHeight > pageHeight * 0.8f)
-                    {
-                        imageHeight = pageHeight * 0.8f;
-                        imageWidth = (imageHeight / imageData.GetHeight()) * imageData.GetWidth();
-                    }
-                    
-                    float x = (pageWidth - imageWidth) / 2f;
-                    float y = (pageHeight - imageHeight) / 2f;
-                    
-                    // Crear imagen y agregarla con Document API
-                    Image image = new Image(imageData);
-                    image.SetWidth(imageWidth);
-                    image.SetHeight(imageHeight);
-                    image.SetFixedPosition(x, y);
-                    
-                    // Usar Document para agregar la imagen
-                    Document doc = new Document(pdfDoc);
-                    doc.Add(image);
-                    doc.Close();
+                    //PdfArtifactWatermarkOptions imageWatermarkOptions = new PdfArtifactWatermarkOptions();
+                    //imageWatermarkOptions.PageIndex = 1;
+                    watermarker.Add(imageWatermark);
                 }
+
+                watermarker.Save(outputStream);
             }
 
             return outputStream.ToArray();
