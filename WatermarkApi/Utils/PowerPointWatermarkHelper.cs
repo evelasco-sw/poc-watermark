@@ -1,4 +1,8 @@
 using DocumentFormat.OpenXml.Packaging;
+using GroupDocs.Watermark;
+using GroupDocs.Watermark.Contents.Presentation;
+using GroupDocs.Watermark.Options.Presentation;
+using GroupDocs.Watermark.Watermarks;
 using P = DocumentFormat.OpenXml.Presentation;
 using A = DocumentFormat.OpenXml.Drawing;
 
@@ -42,22 +46,15 @@ public static class PowerPointWatermarkHelper
 
         try
         {
-            using (PresentationDocument pres = PresentationDocument.Open(memoryStream, true))
+            var loadOptions = new PresentationLoadOptions();
+            using (Watermarker watermarker = new Watermarker(memoryStream, loadOptions))
             {
-                var presentationPart = pres.PresentationPart 
-                    ?? throw new InvalidOperationException("Presentation part not found.");
-
-                // Procesar cada diapositiva
-                foreach (var slidePart in presentationPart.SlideParts)
+                using (var imageWatermark = new ImageWatermark(imagePath))
                 {
-                    var imagePart = slidePart.AddImagePart("image/png");
-                    using (var imageStream = new FileStream(imagePath, System.IO.FileMode.Open, System.IO.FileAccess.Read))
-                    {
-                        imagePart.FeedData(imageStream);
-                    }
-
-                    AddWatermarkToSlide(slidePart, imagePart);
+                    watermarker.Add(imageWatermark);
                 }
+                
+                watermarker.Save(memoryStream);
             }
 
             return memoryStream.ToArray();

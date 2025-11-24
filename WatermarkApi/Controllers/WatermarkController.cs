@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using OfficeIMO.Word;
 using WatermarkApi.Utils;
-using SixLabors.ImageSharp;
 
 namespace WatermarkApi.Controllers
 {
@@ -28,6 +26,7 @@ namespace WatermarkApi.Controllers
 
             string? imagePath = null;
             string? tempImagePath = null;
+            string? tempDocPath = null;
 
             try
             {
@@ -48,31 +47,23 @@ namespace WatermarkApi.Controllers
                 }
 
                 // Guardar temporalmente el documento recibido
-                var tempDocPath = Path.GetTempFileName();
+                tempDocPath = Path.GetTempFileName();
                 using (var stream = new FileStream(tempDocPath, FileMode.Create))
                 {
                     await docFile.CopyToAsync(stream);
                 }
 
-                using (var document = WordDocument.Load(tempDocPath))
-                {
-                    document.AddParagraph("Section 0");
-                    document.AddHeadersAndFooters();
+                // Agregar marca de agua usando GroupDocs helper
+                var bytes = WordWatermarkHelper.AddWatermarkToWord(tempDocPath, imagePath);
+                return File(bytes,
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            "watermarked.docx");
 
-                    var section0 = document.Sections[0];
-                    var section0Header = WatermarkHelper.GetRequiredHeader(section0);
-
-                    section0Header.AddWatermark(WordWatermarkStyle.Image, imagePath);
-
-                    using (var memoryStream = new MemoryStream())
-                    {
-                        document.SaveAs(memoryStream);
-                        return File(memoryStream.ToArray(),
-                                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                    "watermarked.docx");
-                    }
-                }
-
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogError(ex, "Archivo no encontrado: {Message}", ex.Message);
+                return NotFound($"File not found: {ex.Message}");
             }
             catch (Exception ex)
             {
@@ -85,6 +76,10 @@ namespace WatermarkApi.Controllers
                 if (!string.IsNullOrEmpty(tempImagePath) && System.IO.File.Exists(tempImagePath))
                 {
                     try { System.IO.File.Delete(tempImagePath); } catch { }
+                }
+                if (!string.IsNullOrEmpty(tempDocPath) && System.IO.File.Exists(tempDocPath))
+                {
+                    try { System.IO.File.Delete(tempDocPath); } catch { }
                 }
             }
         }

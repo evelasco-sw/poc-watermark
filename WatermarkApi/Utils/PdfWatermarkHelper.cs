@@ -54,18 +54,9 @@ public static class PdfWatermarkHelper
             var loadOptions = new PdfLoadOptions();
             using (Watermarker watermarker = new Watermarker(pdfStream, loadOptions))
             {
-                //// Add text watermark to the first page
-                //TextWatermark textWatermark = new TextWatermark("BCIE", new Font("Verdana", 8));
-                //PdfArtifactWatermarkOptions textWatermarkOptions = new PdfArtifactWatermarkOptions();
-                //textWatermarkOptions.PageIndex = 0;
-
-                //watermarker.Add(textWatermark, textWatermarkOptions);
-
                 // Add image watermark to the second page
                 using (ImageWatermark imageWatermark = new ImageWatermark(imagePath))
                 {
-                    //PdfArtifactWatermarkOptions imageWatermarkOptions = new PdfArtifactWatermarkOptions();
-                    //imageWatermarkOptions.PageIndex = 1;
                     watermarker.Add(imageWatermark);
                 }
 
