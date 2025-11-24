@@ -22,6 +22,17 @@ namespace Bcie.WatermarkGenerator;
 public class WatermarkGenerator
 {
     // -------- Word --------
+    /// <summary>
+    /// Agrega una marca de agua de imagen a todas las páginas de un documento de Microsoft Word.
+    /// </summary>
+    /// <param name="wordDocument">Stream del documento de Word de entrada (.doc o .docx). El stream puede no ser seekable; internamente se copia a memoria.</param>
+    /// <param name="image">Stream de la imagen a utilizar como marca de agua (formatos comunes soportados por GroupDocs/ImageSharp). El stream puede no ser seekable.</param>
+    /// <returns>El documento de Word resultante con la marca de agua aplicada, como arreglo de bytes.</returns>
+    /// <exception cref="ArgumentNullException">Se lanza si <paramref name="wordDocument"/> o <paramref name="image"/> es null.</exception>
+    /// <remarks>
+    /// Este método utiliza GroupDocs.Watermark para insertar la imagen como marca de agua sobre el documento completo.
+    /// El contenido de entrada se copia a un <see cref="MemoryStream"/> para garantizar el posicionamiento en el inicio.
+    /// </remarks>
     public byte[] AddWatermarkToWord(Stream wordDocument, Stream image)
     {
         if (wordDocument is null) throw new ArgumentNullException(nameof(wordDocument));
@@ -43,11 +54,16 @@ public class WatermarkGenerator
 
     // -------- Generación de imágenes (similar a ImageGeneratorApi) --------
     /// <summary>
-    /// Genera un PNG a partir de una imagen base, superponiendo fecha/hora y texto personalizado centrado.
+    /// Genera un PNG a partir de una imagen base, superponiendo la fecha/hora actual y un texto personalizado centrado.
     /// </summary>
-    /// <param name="imageStream">Stream de la imagen base (cualquier formato soportado por ImageSharp).</param>
-    /// <param name="customText">Texto personalizado a dibujar. Se concatena con la fecha en la primera línea.</param>
-    /// <returns>PNG como arreglo de bytes.</returns>
+    /// <param name="imageStream">Stream de la imagen base (cualquier formato soportado por ImageSharp). Puede no ser seekable.</param>
+    /// <param name="customText">Texto personalizado a dibujar. Se coloca debajo de la fecha/hora en líneas separadas.</param>
+    /// <returns>Imagen PNG generada como arreglo de bytes.</returns>
+    /// <exception cref="ArgumentNullException">Se lanza si <paramref name="imageStream"/> es null.</exception>
+    /// <remarks>
+    /// El tamaño de la fuente se ajusta automáticamente para que el texto quepa dentro de la imagen con márgenes.
+    /// Se intenta usar la fuente Arial; si no está disponible, se usa la primera fuente del sistema.
+    /// </remarks>
     public byte[] GeneratePngFromImage(Stream imageStream, string? customText)
     {
         if (imageStream is null) throw new ArgumentNullException(nameof(imageStream));
@@ -106,11 +122,12 @@ public class WatermarkGenerator
     }
 
     /// <summary>
-    /// Genera un PNG a partir de una imagen base codificada en Base64, superponiendo fecha/hora y texto personalizado centrado.
+    /// Genera un PNG a partir de una imagen base codificada en Base64, superponiendo la fecha/hora actual y un texto personalizado centrado.
     /// </summary>
-    /// <param name="base64Image">Imagen base en Base64.</param>
-    /// <param name="customText">Texto personalizado a dibujar.</param>
-    /// <returns>PNG en Base64.</returns>
+    /// <param name="base64Image">Imagen base codificada en Base64.</param>
+    /// <param name="customText">Texto personalizado a dibujar. Se coloca debajo de la fecha/hora en líneas separadas.</param>
+    /// <returns>PNG generado codificado en Base64.</returns>
+    /// <exception cref="ArgumentException">Se lanza si <paramref name="base64Image"/> es null, vacío o contiene solo espacios.</exception>
     public string GeneratePngFromImage(string base64Image, string? customText)
     {
         if (string.IsNullOrWhiteSpace(base64Image)) throw new ArgumentException("Valor requerido", nameof(base64Image));
@@ -119,6 +136,13 @@ public class WatermarkGenerator
         return Convert.ToBase64String(bytes);
     }
 
+    /// <summary>
+    /// Agrega una marca de agua de imagen a un documento de Word provisto en Base64 y devuelve el resultado en Base64.
+    /// </summary>
+    /// <param name="wordDocumentBase64">Contenido del documento de Word (DOC/DOCX) codificado en Base64.</param>
+    /// <param name="imageBase64">Contenido de la imagen de marca de agua codificado en Base64.</param>
+    /// <returns>Documento de Word resultante con la marca de agua, codificado en Base64.</returns>
+    /// <exception cref="ArgumentException">Se lanza si <paramref name="wordDocumentBase64"/> o <paramref name="imageBase64"/> es null, vacío o contiene solo espacios.</exception>
     public string AddWatermarkToWord(string wordDocumentBase64, string imageBase64)
     {
         if (string.IsNullOrWhiteSpace(wordDocumentBase64)) throw new ArgumentException("Valor requerido", nameof(wordDocumentBase64));
@@ -131,6 +155,13 @@ public class WatermarkGenerator
     }
 
     // -------- PowerPoint --------
+    /// <summary>
+    /// Agrega una marca de agua de imagen a todas las diapositivas de una presentación de Microsoft PowerPoint.
+    /// </summary>
+    /// <param name="presentationDocument">Stream de la presentación de PowerPoint de entrada (.ppt o .pptx). Puede no ser seekable; se copia internamente.</param>
+    /// <param name="image">Stream de la imagen a utilizar como marca de agua.</param>
+    /// <returns>La presentación resultante con la marca de agua aplicada, como arreglo de bytes.</returns>
+    /// <exception cref="ArgumentNullException">Se lanza si <paramref name="presentationDocument"/> o <paramref name="image"/> es null.</exception>
     public byte[] AddWatermarkToPresentation(Stream presentationDocument, Stream image)
     {
         if (presentationDocument is null) throw new ArgumentNullException(nameof(presentationDocument));
@@ -150,6 +181,13 @@ public class WatermarkGenerator
         return output.ToArray();
     }
 
+    /// <summary>
+    /// Agrega una marca de agua de imagen a una presentación de PowerPoint provista en Base64 y devuelve el resultado en Base64.
+    /// </summary>
+    /// <param name="presentationBase64">Contenido de la presentación (PPT/PPTX) codificado en Base64.</param>
+    /// <param name="imageBase64">Contenido de la imagen de marca de agua codificado en Base64.</param>
+    /// <returns>Presentación resultante con la marca de agua, codificada en Base64.</returns>
+    /// <exception cref="ArgumentException">Se lanza si <paramref name="presentationBase64"/> o <paramref name="imageBase64"/> es null, vacío o contiene solo espacios.</exception>
     public string AddWatermarkToPresentation(string presentationBase64, string imageBase64)
     {
         if (string.IsNullOrWhiteSpace(presentationBase64)) throw new ArgumentException("Valor requerido", nameof(presentationBase64));
@@ -162,6 +200,13 @@ public class WatermarkGenerator
     }
 
     // -------- PDF --------
+    /// <summary>
+    /// Agrega una marca de agua de imagen a todas las páginas de un documento PDF.
+    /// </summary>
+    /// <param name="pdfDocument">Stream del documento PDF de entrada. Puede no ser seekable; se copia internamente.</param>
+    /// <param name="image">Stream de la imagen a utilizar como marca de agua.</param>
+    /// <returns>El documento PDF resultante con la marca de agua aplicada, como arreglo de bytes.</returns>
+    /// <exception cref="ArgumentNullException">Se lanza si <paramref name="pdfDocument"/> o <paramref name="image"/> es null.</exception>
     public byte[] AddWatermarkToPdf(Stream pdfDocument, Stream image)
     {
         if (pdfDocument is null) throw new ArgumentNullException(nameof(pdfDocument));
@@ -181,6 +226,13 @@ public class WatermarkGenerator
         return output.ToArray();
     }
 
+    /// <summary>
+    /// Agrega una marca de agua de imagen a un documento PDF provisto en Base64 y devuelve el resultado en Base64.
+    /// </summary>
+    /// <param name="pdfBase64">Contenido del documento PDF codificado en Base64.</param>
+    /// <param name="imageBase64">Contenido de la imagen de marca de agua codificado en Base64.</param>
+    /// <returns>Documento PDF resultante con la marca de agua, codificado en Base64.</returns>
+    /// <exception cref="ArgumentException">Se lanza si <paramref name="pdfBase64"/> o <paramref name="imageBase64"/> es null, vacío o contiene solo espacios.</exception>
     public string AddWatermarkToPdf(string pdfBase64, string imageBase64)
     {
         if (string.IsNullOrWhiteSpace(pdfBase64)) throw new ArgumentException("Valor requerido", nameof(pdfBase64));
