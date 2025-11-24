@@ -43,11 +43,11 @@ public class WatermarkGenerator
 
         var loadOptions = new WordProcessingLoadOptions();
         using (var watermarker = new Watermarker(inputCopy, loadOptions))
-        using (var imageWatermark = new ImageWatermark(ToReadableMemoryStream(image)))
-        {
-            watermarker.Add(imageWatermark);
-            watermarker.Save(output);
-        }
+            using (var imageWatermark = new ImageWatermark(ToReadableMemoryStream(image)))
+            {
+                watermarker.Add(imageWatermark);
+                watermarker.Save(output);
+            }
 
         return output.ToArray();
     }
@@ -96,7 +96,8 @@ public class WatermarkGenerator
         var attempts = 0;
         const int maxAttempts = 50;
         var measure = TextMeasurer.MeasureSize(combined, options);
-        while ((measure.Width > imageSize - margin * 2 || measure.Height > imageSize - margin * 2) && attempts < maxAttempts)
+        while ((measure.Width > imageSize - margin * 2 || measure.Height > imageSize - margin * 2) &&
+               attempts < maxAttempts)
         {
             fontSize *= 0.92f;
             if (fontSize < 8f) break;
@@ -145,7 +146,8 @@ public class WatermarkGenerator
     /// <exception cref="ArgumentException">Se lanza si <paramref name="wordDocumentBase64"/> o <paramref name="imageBase64"/> es null, vacío o contiene solo espacios.</exception>
     public string AddWatermarkToWord(string wordDocumentBase64, string imageBase64)
     {
-        if (string.IsNullOrWhiteSpace(wordDocumentBase64)) throw new ArgumentException("Valor requerido", nameof(wordDocumentBase64));
+        if (string.IsNullOrWhiteSpace(wordDocumentBase64))
+            throw new ArgumentException("Valor requerido", nameof(wordDocumentBase64));
         if (string.IsNullOrWhiteSpace(imageBase64)) throw new ArgumentException("Valor requerido", nameof(imageBase64));
 
         using var docMs = new MemoryStream(Convert.FromBase64String(wordDocumentBase64));
@@ -172,11 +174,11 @@ public class WatermarkGenerator
 
         var loadOptions = new PresentationLoadOptions();
         using (var watermarker = new Watermarker(inputCopy, loadOptions))
-        using (var imageWatermark = new ImageWatermark(ToReadableMemoryStream(image)))
-        {
-            watermarker.Add(imageWatermark);
-            watermarker.Save(output);
-        }
+            using (var imageWatermark = new ImageWatermark(ToReadableMemoryStream(image)))
+            {
+                watermarker.Add(imageWatermark);
+                watermarker.Save(output);
+            }
 
         return output.ToArray();
     }
@@ -190,7 +192,8 @@ public class WatermarkGenerator
     /// <exception cref="ArgumentException">Se lanza si <paramref name="presentationBase64"/> o <paramref name="imageBase64"/> es null, vacío o contiene solo espacios.</exception>
     public string AddWatermarkToPresentation(string presentationBase64, string imageBase64)
     {
-        if (string.IsNullOrWhiteSpace(presentationBase64)) throw new ArgumentException("Valor requerido", nameof(presentationBase64));
+        if (string.IsNullOrWhiteSpace(presentationBase64))
+            throw new ArgumentException("Valor requerido", nameof(presentationBase64));
         if (string.IsNullOrWhiteSpace(imageBase64)) throw new ArgumentException("Valor requerido", nameof(imageBase64));
 
         using var docMs = new MemoryStream(Convert.FromBase64String(presentationBase64));
@@ -217,11 +220,11 @@ public class WatermarkGenerator
 
         var loadOptions = new PdfLoadOptions();
         using (var watermarker = new Watermarker(inputCopy, loadOptions))
-        using (var imageWatermark = new ImageWatermark(ToReadableMemoryStream(image)))
-        {
-            watermarker.Add(imageWatermark);
-            watermarker.Save(output);
-        }
+            using (var imageWatermark = new ImageWatermark(ToReadableMemoryStream(image)))
+            {
+                watermarker.Add(imageWatermark);
+                watermarker.Save(output);
+            }
 
         return output.ToArray();
     }
@@ -258,16 +261,5 @@ public class WatermarkGenerator
         source.CopyTo(copy);
         copy.Position = 0;
         return copy;
-    }
-
-    private static byte[] ReadAllBytes(Stream source)
-    {
-        if (source is MemoryStream ms && ms.TryGetBuffer(out var seg))
-        {
-            return seg.ToArray();
-        }
-        using var tmp = new MemoryStream();
-        source.CopyTo(tmp);
-        return tmp.ToArray();
     }
 }
